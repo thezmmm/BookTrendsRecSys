@@ -78,6 +78,23 @@ def predict_and_evaluate(model, test_df):
     print(f"Test set RMSE: {rmse:.4f}")
     return predictions, rmse
 
+
+def update_model_with_new_data(spark, old_dataset_path, new_dataset_path, model_save_path="./als_model"):
+    old_df = load_and_preprocess_data(spark, old_dataset_path)
+    new_df = load_and_preprocess_data(spark, new_dataset_path)
+
+    combined_df = old_df.union(new_df).dropDuplicates(["userId", "itemId"])
+
+    train_df, test_df = combined_df.randomSplit([0.8, 0.2], seed=42)
+
+    model = train_als_model(train_df)
+
+    save_model(model, model_save_path)
+
+    predict_and_evaluate(model, test_df)
+
+    return model, combined_df
+
 if __name__ == "__main__":
     spark = init_spark()
 
