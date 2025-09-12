@@ -9,9 +9,6 @@
     - https://www.goodreads.com/list/
   - collect data by **spider** (maybe)
 
-- Optional: Data about steam video games [SteamSpy - All the data and stats about Steam games](https://steamspy.com/) no data divided by region, only data in total
-  - api [steamspypi · PyPI](https://pypi.org/project/steamspypi/)
-
 ## Target
 
 - Book recommendation system
@@ -48,16 +45,11 @@ userid  bookid   rating
 1		3		4
 ```
 
+## Data Collect
 
+### User-Item Rating matrix
 
-
-
-limited size for the dataset
-
-collect data about books with the most ratings
-
-collect people who rated for these books data (including ratings for other books) 
-
-
-
-books -> people who rated for the books over 20 ([reference]([Recommended for You | Goodreads](https://www.goodreads.com/recommendations?ref=nav_brws_recs))) -> their ratings
+1. select 200 (testing scale) books with the most ratings
+2. Get the user info from reviews
+3. Collect all ratings from these users
+4. format: userId, itemId, Rating
