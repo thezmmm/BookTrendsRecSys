@@ -73,9 +73,9 @@ def train_als_model(train_df):
     tvsModel = tvs.fit(train_df)
     bestModel = tvsModel.bestModel
     print("\nBest Model Parameters:")
-    for p, v in bestModel.extractParamMap().items():
-        if p.name in ["rank", "maxIter", "regParam"]:
-            print(f"  {p.name}: {v}")
+    print(f"  rank: {bestModel.rank}")
+    print(f"  maxIter: {bestModel._java_obj.parent().getMaxIter()}")
+    print(f"  regParam: {bestModel._java_obj.parent().getRegParam()}")
 
     return bestModel
 
