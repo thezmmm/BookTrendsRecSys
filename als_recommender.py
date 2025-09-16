@@ -1,3 +1,4 @@
+from pyspark.ml.tuning import ParamGridBuilder, TrainValidationSplit
 from pyspark.sql import SparkSession
 from pyspark.ml.recommendation import ALS, ALSModel
 from pyspark.ml.feature import StringIndexer
@@ -40,7 +41,7 @@ def load_and_preprocess_data(spark, dataset_path):
     return df
 
 
-def train_als_model(train_df, rank=10, maxIter=10, regParam=0.1):
+def train_als_model(train_df):
     als = ALS(
         userCol="userId",
         itemCol="itemId",
@@ -48,12 +49,35 @@ def train_als_model(train_df, rank=10, maxIter=10, regParam=0.1):
         nonnegative=True,
         implicitPrefs=False,
         coldStartStrategy="drop",
-        rank=rank,
-        maxIter=maxIter,
-        regParam=regParam
     )
-    model = als.fit(train_df)
-    return model
+    paramGrid = (ParamGridBuilder()
+                 .addGrid(als.rank, [10, 20, 30])
+                 .addGrid(als.regParam, [0.01, 0.05, 0.1])
+                 .addGrid(als.maxIter, [5, 10])
+                 .build())
+
+    evaluator = RegressionEvaluator(
+        metricName="rmse",
+        labelCol="rating",
+        predictionCol="prediction"
+    )
+
+    tvs = TrainValidationSplit(
+        estimator=als,
+        estimatorParamMaps=paramGrid,
+        evaluator=evaluator,
+        trainRatio=0.8,
+        parallelism=4
+    )
+
+    tvsModel = tvs.fit(train_df)
+    bestModel = tvsModel.bestModel
+    print("\nBest Model Parameters:")
+    for p, v in bestModel.extractParamMap().items():
+        if p.name in ["rank", "maxIter", "regParam"]:
+            print(f"  {p.name}: {v}")
+
+    return bestModel
 
 def save_model(model, path="./als_model"):
     if os.path.exists(path):
