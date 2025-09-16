@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.ml.recommendation import ALS
+from pyspark.ml.recommendation import ALS, ALSModel
 from pyspark.ml.feature import StringIndexer
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.sql import functions as F
@@ -62,8 +62,8 @@ def save_model(model, path="./als_model"):
         shutil.rmtree(path)
     model.save(path)
 
-def load_model(spark, path="./als_model"):
-    return ALS.load(path)
+def load_model(path="./als_model"):
+    return ALSModel.load(path)
 
 def predict_and_evaluate(model, test_df):
     predictions = model.transform(test_df)
@@ -98,14 +98,14 @@ def update_model_with_new_data(spark, old_dataset_path, new_dataset_path, model_
 if __name__ == "__main__":
     spark = init_spark()
 
-    data_path = "./datasets/ratings_test.csv"
+    data_path = "./datasets/ratings.csv"
     df = load_and_preprocess_data(spark, data_path)
 
     train_df, test_df = df.randomSplit([0.8, 0.2], seed=42)
 
     model = train_als_model(train_df)
     save_model(model, path="./als_model")
-
+    # model = load_model("./als_model")
     predict_and_evaluate(model, test_df)
 
     spark.stop()
