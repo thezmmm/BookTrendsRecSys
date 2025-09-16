@@ -40,8 +40,21 @@ def load_and_preprocess_data(spark, dataset_path):
     df = df.repartition(8)
     return df
 
+def train_als_model(train_df, rank=30, maxIter=10, regParam=0.1):
+    als = ALS(
+        userCol="userId",
+        itemCol="itemId",
+        ratingCol="rating",
+        nonnegative=True,
+        implicitPrefs=False,
+        coldStartStrategy="drop",
+        rank=rank,
+        maxIter=maxIter,
+        regParam=regParam )
+    model = als.fit(train_df)
+    return model
 
-def train_als_model(train_df):
+def train_als_model_with_tuning(train_df):
     als = ALS(
         userCol="userId",
         itemCol="itemId",
