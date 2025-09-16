@@ -83,7 +83,8 @@ def update_model_with_new_data(spark, old_dataset_path, new_dataset_path, model_
     old_df = load_and_preprocess_data(spark, old_dataset_path)
     new_df = load_and_preprocess_data(spark, new_dataset_path)
 
-    combined_df = old_df.union(new_df).dropDuplicates(["userId", "itemId"])
+    # combined_df = old_df.union(new_df).dropDuplicates(["userId", "itemId"])
+    combined_df = old_df.union(new_df).groupBy("userId", "itemId").agg(F.avg("rating").alias("rating"))
 
     train_df, test_df = combined_df.randomSplit([0.8, 0.2], seed=42)
 
