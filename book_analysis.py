@@ -79,3 +79,31 @@ plt.title("Number of Books by Non-English Languages")
 plt.xlabel("Number of Books")
 plt.ylabel("Language Code")
 plt.show()
+
+# hot books analysis (most rating counts)
+top_books = df.sort_values(by='ratings_count', ascending=False).head(10)
+top_books_titles = top_books['title'].values
+
+print("Top 10 books by ratings_count:")
+print(top_books[['title', 'ratings_count', 'average_rating']])
+# average ratings
+plt.figure(figsize=(12,6))
+sns.barplot(x='title', y='average_rating', data=top_books, palette="viridis")
+plt.xticks(rotation=45, ha='right')
+plt.ylabel("Average Rating")
+plt.title("Average Rating of Top 10 Most Rated Books")
+plt.show()
+
+# ratings from 1 to 5 distribution
+ratings_cols = ['ratings_1','ratings_2','ratings_3','ratings_4','ratings_5']
+top_books_ratings = top_books[['title'] + ratings_cols].set_index('title')
+
+top_books_ratings_percent = top_books_ratings.div(top_books_ratings.sum(axis=1), axis=0) * 100
+
+top_books_ratings_percent.plot(kind='bar', stacked=True, figsize=(12,6),
+                               colormap='viridis')
+plt.ylabel("Percentage of Ratings (%)")
+plt.title("Ratings 1~5 Distribution of Top 10 Most Rated Books")
+plt.xticks(rotation=45, ha='right')
+plt.legend(title="Stars")
+plt.show()
