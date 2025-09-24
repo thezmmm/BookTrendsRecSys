@@ -39,3 +39,23 @@ legend_labels = [f"{label}: {percent:.1f}%" for label, percent in zip(rating_bin
 plt.legend(wedges, legend_labels, title="Rating Range", loc="center left", bbox_to_anchor=(1, 0.5))
 plt.tight_layout()
 plt.show()
+
+# published years analysis
+# number of published books per year
+plt.figure(figsize=(12,5))
+pub_count = df['original_publication_year'].value_counts().sort_index()
+sns.lineplot(x=pub_count.index, y=pub_count.values)
+plt.title("Number of Books Published per Year")
+plt.xlabel("Year")
+plt.ylabel("Number of Books")
+plt.show()
+
+# average ratings per year
+avg_rating_by_year = df.groupby('original_publication_year')['average_rating'].mean()
+
+plt.figure(figsize=(12,5))
+sns.lineplot(x=avg_rating_by_year.index, y=avg_rating_by_year.values)
+plt.title("Average Rating by Publication Year")
+plt.xlabel("Year")
+plt.ylabel("Average Rating")
+plt.show()
