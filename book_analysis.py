@@ -59,3 +59,23 @@ plt.title("Average Rating by Publication Year")
 plt.xlabel("Year")
 plt.ylabel("Average Rating")
 plt.show()
+
+# language distribution analysis
+# number of books by language code
+lang_count = df['language_code'].value_counts()
+plt.figure(figsize=(10,8))
+sns.barplot(x=lang_count.values, y=lang_count.index, palette="coolwarm")
+plt.title("Number of Books by Language")
+plt.xlabel("Number of Books")
+plt.ylabel("Language Code")
+plt.show()
+
+# number of book by language code (filter en)
+df_non_en = df[~df['language_code'].str.contains("en", na=False)]
+lang_count = df_non_en['language_code'].value_counts()
+plt.figure(figsize=(10,8))
+sns.barplot(x=lang_count.values, y=lang_count.index, palette="coolwarm")
+plt.title("Number of Books by Non-English Languages")
+plt.xlabel("Number of Books")
+plt.ylabel("Language Code")
+plt.show()
