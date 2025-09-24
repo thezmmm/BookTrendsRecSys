@@ -129,3 +129,26 @@ plt.title("1~5 Star Rating Distribution of Top 10 High-Rating Low-Rating-Count B
 plt.xticks(rotation=45, ha='right')
 plt.legend(title="Stars")
 plt.show()
+
+# word cloud
+from wordcloud import WordCloud, STOPWORDS
+text = " ".join(title for title in df['title'].dropna())
+
+stopwords = set(STOPWORDS)
+custom_stopwords = {'The', 'And', 'Of', 'A', 'In', 'Book', 'Volume', 'Edition'}
+stopwords.update(custom_stopwords)
+
+wordcloud = WordCloud(
+    width=800,
+    height=400,
+    background_color='white',
+    stopwords=stopwords,
+    colormap='viridis',
+    max_words=200
+).generate(text)
+
+plt.figure(figsize=(15,7))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis('off')
+plt.title("Word Cloud of Book Titles")
+plt.show()
