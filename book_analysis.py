@@ -107,3 +107,25 @@ plt.title("Ratings 1~5 Distribution of Top 10 Most Rated Books")
 plt.xticks(rotation=45, ha='right')
 plt.legend(title="Stars")
 plt.show()
+
+# find books with few rating counts and high ratings
+high_rating_threshold = 4.0
+low_rating_count_threshold = df['ratings_count'].quantile(0.20)
+
+cold_books = df[(df['average_rating'] >= high_rating_threshold) &
+                (df['ratings_count'] <= low_rating_count_threshold)]
+
+top_cold_books = cold_books.sort_values(by='average_rating', ascending=False).head(10)
+
+ratings_cols = ['ratings_1','ratings_2','ratings_3','ratings_4','ratings_5']
+cold_books_ratings = top_cold_books[['title'] + ratings_cols].set_index('title')
+
+cold_books_ratings_percent = cold_books_ratings.div(cold_books_ratings.sum(axis=1), axis=0) * 100
+
+cold_books_ratings_percent.plot(kind='bar', stacked=True, figsize=(12,6),
+                                colormap='viridis')
+plt.ylabel("Percentage of Ratings (%)")
+plt.title("1~5 Star Rating Distribution of Top 10 High-Rating Low-Rating-Count Books")
+plt.xticks(rotation=45, ha='right')
+plt.legend(title="Stars")
+plt.show()
