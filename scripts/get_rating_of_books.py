@@ -4,14 +4,16 @@ import json
 import re
 import time
 import pandas as pd
+import os
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+import random
 
-# 构建请求头，模拟浏览器
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
     "Accept-Language": "en-US,en;q=0.9"
 }
 
-# 解析书籍和评论详情（单页）
 def extract_book_details(html):
     soup = BeautifulSoup(html, 'html.parser')
     title_elem = soup.select_one('h1.H1Title a[data-testid="title"]')
@@ -64,32 +66,64 @@ def extract_book_details(html):
     return title, rating, reviews
 
 # 爬取 Goodreads 所有评论
-def scrape_goodreads_all_reviews(base_url,max_page,start_page=1):
+def scrape_goodreads_all_reviews(base_url, max_page, start_page=1, headers=None):
     all_reviews = []
     page = start_page
     title, rating = None, None
 
-    while True:
-        if page > max_page:
-            break
+    # ---- 创建带重试机制的 Session ----
+    session = requests.Session()
+    retries = Retry(
+        total=5,                  # 最多重试5次
+        backoff_factor=2,         # 每次重试间隔指数递增（2, 4, 8... 秒）
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"]
+    )
+    adapter = HTTPAdapter(max_retries=retries)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+
+    while page <= max_page:
         url = f"{base_url}?page={page}"
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200:
+        try:
+            response = session.get(url, headers=headers, timeout=(10, 60))
+            if response.status_code != 200:
+                print(f"[{response.status_code}] Skipping page {page}")
+                break
+
+            t, r, reviews = extract_book_details(response.text)
+            if not reviews:
+                print(f"[Empty] No reviews on page {page}, stopping.")
+                break
+
+            if not title:
+                title, rating = t, r
+
+            all_reviews.extend(reviews)
+            print(f"[OK] Page {page}: {len(all_reviews)} total reviews")
+
+        except requests.exceptions.ReadTimeout:
+            print(f"[Timeout] Page {page} timed out, retrying later...")
+            time.sleep(random.uniform(5, 10))
+            page += 1
+            continue
+
+        except requests.exceptions.ConnectionError as e:
+            print(f"[ConnectionError] {e}, retrying after delay...")
+            time.sleep(random.uniform(10, 20))
+            continue
+
+        except requests.exceptions.RequestException as e:
+            print(f"[Error] Unexpected error on page {page}: {e}")
             break
 
-        t, r, reviews = extract_book_details(response.text)
-        if not reviews:
-            break
-
-        if not title:
-            title, rating = t, r
-
-        all_reviews.extend(reviews)
-        print(f"Page {page} ,  {len(all_reviews)} reviews")
+        # 防止被封：每页后暂停 2~5 秒
+        time.sleep(random.uniform(2, 5))
         page += 1
-        time.sleep(2)
 
-    return {'title': title, 'rating': rating, 'reviews': all_reviews}
+    session.close()
+
+    return {"title": title, "rating": rating, "reviews": all_reviews}
 
 def save_reviews_to_json(data, book_id):
     filename = f"goodreads_reviews_{book_id}.json"
@@ -97,7 +131,6 @@ def save_reviews_to_json(data, book_id):
         json.dump(data, f, ensure_ascii=False, indent=4)
     print(f"Saved as {filename}")
 
-# 主程序
 # if __name__ == "__main__":
 #     base_url = "https://www.goodreads.com/book/show/1420.Hamlet/reviews"
 #     MAX_PAGE = 30
@@ -110,12 +143,21 @@ def save_reviews_to_json(data, book_id):
 
 
 if __name__ == "__main__":
+    #brute-force traversal
     df = pd.read_csv('book_counts.csv')
     low_count_books = df[df['count'] < 10]
 
     MAX_PAGE = 30
     for index, row in low_count_books.iterrows():
         book_slug = row['book_slug']
+
+        match = re.match(r"(\d+)", book_slug)
+        book_id = match.group(1) if match else "unknown"
+        out_path = f"goodreads_reviews_{book_id}.json"
+        if os.path.exists(out_path):
+            print(f"Skipping book {book_id} (file already exists)")
+            continue
+
         base_url = f"https://www.goodreads.com/book/show/{book_slug}/reviews"
         match = re.search(r'/book/show/(\d+)', base_url)
         book_id = match.group(1) if match else "unknown"
