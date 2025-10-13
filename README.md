@@ -15,18 +15,6 @@ This project integrates both **data analytics** and **machine learning** compone
     - https://www.goodreads.com/user/best_reviewers?country=US&duration=a
   - Book list with meaningful filters
     - https://www.goodreads.com/list/
-  - collect data by **spider** (maybe)
----
-
-## Target
-
-- Book recommendation system
-  - User-Based Collaborative Filtering Algorithm
-  - no good visiulization
-- Show Trend about book with visualization (by region, by time, by genre, by language ....)
-- the average ratings from one region
-- .....
-
 ---
 
 ## Data Collect
@@ -79,6 +67,18 @@ It provides utilities for data preprocessing, model training, hyperparameter tun
 | `save_model(model, path)` / `load_model(path)`                                           | Saves or loads a trained ALS model.                                           |
 | `update_model_with_new_data(spark, old_dataset_path, new_dataset_path, model_save_path)` | Merges new data with existing data, retrains, and saves the updated model.    |
 
+### Results
+The ALS model was evaluated on the test set, achieving a RMSE of `0.8230`.
+
+Interpretation:
+
+On average, predicted ratings deviate by ~0.82 points on the 1–5 scale.
+
+The model effectively captures user-book preferences and handles sparse rating data.
+
+The model provides reasonably accurate book recommendations, helping users discover new books based on their previous ratings.
+
+
 ## 📊 Book Data Analysis Module
 This module performs **exploratory data analysis (EDA)** and visualization on the `books.csv` dataset.
 It provides insights into book ratings, publication trends, language distributions, and popular titles through various charts and plots.
@@ -106,4 +106,3 @@ It provides insights into book ratings, publication trends, language distributio
 - 🧊 Cold Book Detection – finds underrated gems
 
 - ☁️ Word Cloud – highlights common words in book titles
-
