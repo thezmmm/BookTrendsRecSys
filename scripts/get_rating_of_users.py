@@ -7,7 +7,10 @@ from bs4 import BeautifulSoup
 import os
 import random
 import glob
-# =============== Cookies & Headers (可根据自己账号调整) ===============
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# =============== Cookies & Headers ===============
 cookies = {
     "ccsid": "379-0866094-5504217",
     "ubid-main": "133-4921598-2766758",
@@ -30,21 +33,13 @@ headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
     "Accept-Encoding": "gzip, deflate, br, zstd",
-    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+    "Accept-Language": "en-US,en;q=0.9",
     "Cache-Control": "no-cache",
     "Referer": "https://www.goodreads.com/",
     "Upgrade-Insecure-Requests": "1",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-    "sec-ch-ua": '"Chromium";v="140", "Not=A?Brand";v="24", "Microsoft Edge";v="140"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
 }
 
-
-# =============== 评分映射 ===============
+# =============== Rating Mapping ===============
 rating_map = {
     "did not like it": 1,
     "it was ok": 2,
@@ -53,37 +48,7 @@ rating_map = {
     "it was amazing": 5
 }
 
-import json
-import re
-from urllib.parse import urljoin, parse_qs, urlparse
-import requests
-from bs4 import BeautifulSoup
-
-# =============== Cookies & Headers (可根据自己账号调整) ===============
-cookies = {
-    # 填入你的 cookies
-}
-
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br, zstd",
-    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
-    "Cache-Control": "no-cache",
-    "Referer": "https://www.goodreads.com/",
-    "Upgrade-Insecure-Requests": "1",
-}
-
-# =============== score map ===============
-rating_map = {
-    "did not like it": 1,
-    "it was ok": 2,
-    "liked it": 3,
-    "really liked it": 4,
-    "it was amazing": 5
-}
-
-# =============== tool functions ===============
+# =============== Utility Functions ===============
 def get_text(el):
     return el.get_text(strip=True) if el else None
 
@@ -132,6 +97,7 @@ def extract_my_rating_fallback(td_shelves):
                 pass
     return None, None
 
+# =============== Parse List Page ===============
 def parse_list_page(html, base_url):
     soup = BeautifulSoup(html, "lxml")
     rows = soup.select("tr.bookalike.review") or soup.select("table#books tr") or []
@@ -244,59 +210,69 @@ def parse_list_page(html, base_url):
 
     return items
 
-def crawl_goodreads_list(USER_ID, MAX_PAGES, headers, cookies):
+
+# =============== Crawl Goodreads Pages ===============
+def crawl_goodreads_list(user_id, max_pages, headers, cookies):
     BASE_URL = "https://www.goodreads.com"
     all_items = []
+
     sess = requests.Session()
     sess.headers.update(headers)
     for k, v in cookies.items():
         sess.cookies.set(k, v)
 
-    for page in range(1, MAX_PAGES + 1):
-        page_url = f"{BASE_URL}/review/list/{USER_ID}?page={page}&sort=rating&view=reviews"
-        resp = sess.get(page_url, timeout=30)
-        print(f"[{resp.status_code}] GET {page_url}")
+    retries = Retry(
+        total=5,
+        backoff_factor=2,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"]
+    )
+    sess.mount("https://", HTTPAdapter(max_retries=retries))
+
+    for page in range(1, max_pages + 1):
+        page_url = f"{BASE_URL}/review/list/{user_id}?page={page}&sort=rating&view=reviews"
+        try:
+            resp = sess.get(page_url, timeout=(10, 60))
+            print(f"[{resp.status_code}] GET {page_url}")
+        except requests.exceptions.ReadTimeout:
+            print(f"[Timeout] Skipping page {page} for user {user_id}")
+            continue
+        except requests.exceptions.RequestException as e:
+            print(f"[Error] {e}")
+            continue
+
         if resp.status_code != 200:
             break
+
         items = parse_list_page(resp.text, BASE_URL)
         all_items.extend(items)
+
         if not items:
             break
 
+    sess.close()
     return all_items
 
 
 def crawl_user_reviews(user_id, max_pages=30):
     out_path = f"./goodreads_ratings_{user_id}.json"
-
-    # if exist
     if os.path.exists(out_path):
         print(f"File already exists: {out_path}")
         return
 
-    # 爬取数据
     data = crawl_goodreads_list(user_id, max_pages, headers, cookies)
 
-    # 保存数据
     if data:
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(
-                {
-                    "source_user_id": user_id,
-                    "count": len(data),
-                    "items": data,
-                },
-                f,
-                ensure_ascii=False,
-                indent=2,
+                {"source_user_id": user_id, "count": len(data), "items": data},
+                f, ensure_ascii=False, indent=2
             )
-        print(f"Saved：{out_path}（共 {len(data)} 条）")
+        print(f"Saved: {out_path} ({len(data)} items)")
     else:
         print(f"No data found for user: {user_id}")
 
-    # 请求间隔（避免超时/被限流）
-    sleep_time = random.uniform(2, 5)
-    time.sleep(sleep_time)
+    time.sleep(random.uniform(2, 5))
 
 
 def process_all_users(book_path, max_pages=30):
@@ -309,10 +285,9 @@ def process_all_users(book_path, max_pages=30):
         crawl_user_reviews(user_id, max_pages)
 
 
+# =============== Main Entry ===============
 if __name__ == "__main__":
-
-    MAX_PAGES = 30
-    # process all json files like goodreads_reviews_{user_id}}
+    MAX_PAGES = 40
     review_files = glob.glob("./goodreads_reviews_*.json")
     for book_path in review_files:
         print(f"Processing: {book_path}")
