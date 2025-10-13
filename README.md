@@ -30,6 +30,38 @@ This project integrates both **data analytics** and **machine learning** compone
 ---
 
 ## Data Collect
+This dataset contains detailed ratings and metadata for 10,000 of the most popular books, covering a total of six million user ratings. It is primarily used for analyzing user preferences, recommendation system modeling, and book popularity studies.
+
+- Book Ratings
+
+Contains six million ratings from users for the 10,000 most popular books.
+
+Ratings are typically on a scale from 1 to 5.
+- Book Metadata
+
+Each row represents a book and contains the following attributes:
+
+| Column Name                 | Description                                       |
+| --------------------------- | ------------------------------------------------- |
+| `book_id`                   | Unique internal identifier for each book.         |
+| `goodreads_book_id`         | Book ID as listed on Goodreads.                   |
+| `best_book_id`              | Best edition ID on Goodreads.                     |
+| `work_id`                   | Identifier for the work, grouping all editions.   |
+| `books_count`               | Number of editions of this book.                  |
+| `isbn`                      | 10-digit ISBN of the book edition.                |
+| `isbn13`                    | 13-digit ISBN of the book edition.                |
+| `authors`                   | Names of the authors of the book.                 |
+| `original_publication_year` | Year the book was originally published.           |
+| `original_title`            | Original title of the book (if different).        |
+| `title`                     | Main title of the book.                           |
+| `language_code`             | Language code of the book (e.g., `en`).           |
+| `average_rating`            | Average user rating for this book.                |
+| `ratings_count`             | Number of ratings for this edition.               |
+| `work_ratings_count`        | Total number of ratings across all editions.      |
+| `work_text_reviews_count`   | Total number of text reviews across all editions. |
+| `ratings_1` … `ratings_5`   | Count of ratings at each level (1–5 stars).       |
+| `image_url`                 | URL of the book's main image.                     |
+| `small_image_url`           | URL of a smaller version of the book image.       |
 
 ---
 
