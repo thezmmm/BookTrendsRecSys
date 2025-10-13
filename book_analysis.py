@@ -41,6 +41,7 @@ plt.tight_layout()
 plt.show()
 
 # published years analysis
+df = df[df['original_publication_year'] >= 1500]
 # number of published books per year
 plt.figure(figsize=(12,5))
 pub_count = df['original_publication_year'].value_counts().sort_index()
